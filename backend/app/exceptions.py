@@ -6,7 +6,8 @@ from pydantic import ValidationError as PydanticValidationError
 from pydantic_core import ValidationError as PydanticCoreValidationError
 from typing import Union
 
-from app.utils import response
+from app.utils import response as resp_func
+from app.utils import ErrorResponse
 
 CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
@@ -36,7 +37,7 @@ async def validation_exception_handler(
         # Build message like: "Email is required"
         error_message = f"{field_name} {raw_msg}"
 
-    error_response = response.ErrorResponse(
+    error_response = ErrorResponse(
         code=400,
         message=error_message,
     )
@@ -45,7 +46,7 @@ async def validation_exception_handler(
 
 
 async def generic_exception_handler(request: Request, exc: Exception):
-    error_response = response.ErrorResponse(
+    error_response = ErrorResponse(
         code=500,
         message="An internal server error occurred.",
     )
@@ -59,7 +60,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
 async def custom_http_exception_handler(request, exc: StarletteHTTPException):
     status_code = exc.status_code
 
-    error_response = response.ErrorResponse(
+    error_response = ErrorResponse(
         code=exc.status_code,
         message=exc.detail,
     )

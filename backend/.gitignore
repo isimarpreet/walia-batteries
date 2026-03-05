@@ -50,7 +50,6 @@ next-env.d.ts
 __pycache__/
 *.py[cod]
 *$py.class
-*\__pycache__/
 
 # Virtual Environments
 venv/
