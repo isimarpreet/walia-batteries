@@ -1,0 +1,3 @@
+'use client';
+
+// ...copy entire ClaimsPage.jsx content here with Next.js router...
