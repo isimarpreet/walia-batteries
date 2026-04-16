@@ -1,3 +1,5 @@
+'use client';
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { authAPI } from '../services/api';
 
@@ -39,6 +41,11 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         setIsAuthenticated(true);
         return { success: true };
+      } else {
+        return {
+          success: false,
+          message: response.data.message || 'Invalid credentials',
+        };
       }
     } catch (error) {
       return {

@@ -4,11 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # CORS origins
-origins = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    # Add your frontend URLs
-]
+origins = ["*"]
 
 # Supabase configuration
 SUPABASE_URL = os.getenv("SUPABASE_URL")

@@ -2,10 +2,10 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../context/AuthContext';
-import DashboardPage from '../components/pages/DashboardPage';
+import { useAuth } from '../../../context/AuthContext';
+import CreateClaimPage from '../../../components/pages/CreateClaimPage';
 
-export default function Home() {
+export default function CreateClaim() {
   const router = useRouter();
   const { isAuthenticated, loading } = useAuth();
 
@@ -23,9 +23,7 @@ export default function Home() {
     );
   }
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  if (!isAuthenticated) return null;
 
-  return <DashboardPage />;
+  return <CreateClaimPage />;
 }

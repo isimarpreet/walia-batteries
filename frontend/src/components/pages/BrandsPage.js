@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import AppLayout from '../AppLayout';
+import { useEffect, useState } from 'react';
+import DashboardLayout from '../DashboardLayout';
+import PageHeader from '../PageHeader';
 import { brandAPI, modelAPI } from '../../services/api';
+import { Tag, Plus } from 'lucide-react';
 
-const BrandsPage = () => {
+export default function BrandsPage() {
   const [brands, setBrands] = useState([]);
   const [models, setModels] = useState([]);
 
@@ -13,11 +15,7 @@ const BrandsPage = () => {
   const [brandError, setBrandError] = useState('');
   const [brandSuccess, setBrandSuccess] = useState('');
 
-  const [modelForm, setModelForm] = useState({
-    brand_id: '',
-    model_name: '',
-    warranty_months: '',
-  });
+  const [modelForm, setModelForm] = useState({ brand_id: '', model_name: '', warranty_months: '' });
   const [modelLoading, setModelLoading] = useState(false);
   const [modelError, setModelError] = useState('');
   const [modelSuccess, setModelSuccess] = useState('');
@@ -49,7 +47,7 @@ const BrandsPage = () => {
     try {
       const res = await brandAPI.create({ name: brandName });
       if (res.data.success) {
-        setBrandSuccess('Brand created');
+        setBrandSuccess('Brand created successfully');
         setBrandName('');
         loadBrands();
       } else {
@@ -57,9 +55,7 @@ const BrandsPage = () => {
       }
     } catch (err) {
       setBrandError(err.response?.data?.message || 'Failed to create brand');
-    } finally {
-      setBrandLoading(false);
-    }
+    } finally { setBrandLoading(false); }
   };
 
   const handleModelSubmit = async (e) => {
@@ -71,12 +67,10 @@ const BrandsPage = () => {
       const res = await modelAPI.create({
         brand_id: parseInt(modelForm.brand_id),
         model_name: modelForm.model_name,
-        warranty_months: modelForm.warranty_months
-          ? parseInt(modelForm.warranty_months)
-          : null,
+        warranty_months: modelForm.warranty_months ? parseInt(modelForm.warranty_months) : null,
       });
       if (res.data.success) {
-        setModelSuccess('Model created');
+        setModelSuccess('Model created successfully');
         setModelForm({ brand_id: '', model_name: '', warranty_months: '' });
         loadModels();
       } else {
@@ -84,212 +78,119 @@ const BrandsPage = () => {
       }
     } catch (err) {
       setModelError(err.response?.data?.message || 'Failed to create model');
-    } finally {
-      setModelLoading(false);
-    }
+    } finally { setModelLoading(false); }
   };
 
-  const brandsMap = Object.fromEntries(brands.map((b) => [b.id, b.name]));
+  const brandsMap = Object.fromEntries(brands.map(b => [b.id, b.name]));
 
   return (
-    <AppLayout>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Brands column */}
-        <div className="space-y-5">
-          <section className="bg-white rounded-xl shadow-sm p-5 border border-slate-100">
-            <h2 className="text-sm font-semibold text-slate-800 mb-1">Add Brand</h2>
-            <p className="text-xs text-slate-500 mb-4">
-              Add a new battery brand.
-            </p>
-
-            {brandError && (
-              <div className="mb-3 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
-                {brandError}
-              </div>
-            )}
-            {brandSuccess && (
-              <div className="mb-3 rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-700">
-                {brandSuccess}
-              </div>
-            )}
-
-            <form onSubmit={handleBrandSubmit} className="flex gap-2">
-              <input
-                value={brandName}
-                onChange={(e) => setBrandName(e.target.value)}
-                required
-                className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Brand name (e.g. Exide)"
-              />
-              <button
-                type="submit"
-                disabled={brandLoading}
-                className="rounded-md bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-              >
-                {brandLoading ? 'Saving...' : 'Add'}
-              </button>
-            </form>
-          </section>
-
-          <section className="bg-white rounded-xl shadow-sm p-5 border border-slate-100">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-slate-800">Brands</h2>
-              <span className="text-xs text-slate-400">{brands.length} total</span>
-            </div>
-            {brands.length === 0 ? (
-              <p className="text-xs text-slate-500">No brands yet. Add one above.</p>
-            ) : (
-              <div className="space-y-1.5">
-                {brands.map((b) => (
-                  <div
-                    key={b.id}
-                    className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 bg-slate-50"
-                  >
-                    <span className="text-xs font-medium text-slate-700">
-                      {b.name}
-                    </span>
-                    <span className="text-xs text-slate-400">#{b.id}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
-
-        {/* Models column */}
-        <div className="space-y-5">
-          <section className="bg-white rounded-xl shadow-sm p-5 border border-slate-100">
-            <h2 className="text-sm font-semibold text-slate-800 mb-1">Add Model</h2>
-            <p className="text-xs text-slate-500 mb-4">
-              Add a new battery model under a brand.
-            </p>
-
-            {modelError && (
-              <div className="mb-3 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
-                {modelError}
-              </div>
-            )}
-            {modelSuccess && (
-              <div className="mb-3 rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-700">
-                {modelSuccess}
-              </div>
-            )}
-
-            <form onSubmit={handleModelSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  Brand
-                </label>
-                <select
-                  value={modelForm.brand_id}
-                  onChange={(e) =>
-                    setModelForm((prev) => ({ ...prev, brand_id: e.target.value }))
-                  }
+    <DashboardLayout>
+      <PageHeader title="Brands & Models" icon={Tag} />
+      <div className="p-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Brands column */}
+          <div className="space-y-5">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+              <h2 className="text-base font-semibold text-slate-800 mb-1">Add Brand</h2>
+              <p className="text-xs text-slate-500 mb-4">Add a new battery brand.</p>
+              {brandError && <div className="mb-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">{brandError}</div>}
+              {brandSuccess && <div className="mb-3 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-700">{brandSuccess}</div>}
+              <form onSubmit={handleBrandSubmit} className="flex gap-2">
+                <input
+                  value={brandName}
+                  onChange={e => setBrandName(e.target.value)}
                   required
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select brand</option>
-                  {brands.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                    </option>
+                  placeholder="Brand name (e.g. Exide)"
+                  className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button type="submit" disabled={brandLoading} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
+                  <Plus size={14} />{brandLoading ? 'Adding...' : 'Add'}
+                </button>
+              </form>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="font-semibold text-slate-800">All Brands</h3>
+                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded-full">{brands.length}</span>
+              </div>
+              {brands.length === 0 ? (
+                <p className="px-6 py-8 text-center text-sm text-slate-400">No brands yet.</p>
+              ) : (
+                <div className="divide-y divide-slate-50">
+                  {brands.map(b => (
+                    <div key={b.id} className="flex items-center justify-between px-6 py-3 hover:bg-slate-50 transition-colors">
+                      <span className="text-sm font-medium text-slate-700">{b.name}</span>
+                      <span className="text-xs text-slate-400 font-mono">#{b.id}</span>
+                    </div>
                   ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  Model Name
-                </label>
-                <input
-                  value={modelForm.model_name}
-                  onChange={(e) =>
-                    setModelForm((prev) => ({
-                      ...prev,
-                      model_name: e.target.value,
-                    }))
-                  }
-                  required
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g. FEW0-TZ0"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  Warranty (months, optional)
-                </label>
-                <input
-                  type="number"
-                  value={modelForm.warranty_months}
-                  onChange={(e) =>
-                    setModelForm((prev) => ({
-                      ...prev,
-                      warranty_months: e.target.value,
-                    }))
-                  }
-                  min="1"
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g. 24"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={modelLoading}
-                className="w-full inline-flex justify-center rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
-              >
-                {modelLoading ? 'Saving...' : 'Add Model'}
-              </button>
-            </form>
-          </section>
-
-          <section className="bg-white rounded-xl shadow-sm p-5 border border-slate-100">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-slate-800">Models</h2>
-              <span className="text-xs text-slate-400">{models.length} total</span>
+                </div>
+              )}
             </div>
-            {models.length === 0 ? (
-              <p className="text-xs text-slate-500">No models yet. Add one above.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-xs border border-slate-100 rounded-lg overflow-hidden">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-medium text-slate-600 border-b border-slate-100">
-                        Brand
-                      </th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-600 border-b border-slate-100">
-                        Model
-                      </th>
-                      <th className="px-3 py-2 text-left font-medium text-slate-600 border-b border-slate-100">
-                        Warranty
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {models.map((m) => (
-                      <tr key={m.id} className="hover:bg-slate-50">
-                        <td className="px-3 py-2 border-b border-slate-100">
-                          {brandsMap[m.brand_id] || '-'}
-                        </td>
-                        <td className="px-3 py-2 border-b border-slate-100 font-medium">
-                          {m.model_name}
-                        </td>
-                        <td className="px-3 py-2 border-b border-slate-100 text-slate-500">
-                          {m.warranty_months ? `${m.warranty_months} mo` : '-'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          </div>
+
+          {/* Models column */}
+          <div className="space-y-5">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+              <h2 className="text-base font-semibold text-slate-800 mb-1">Add Model</h2>
+              <p className="text-xs text-slate-500 mb-4">Add a new battery model under a brand.</p>
+              {modelError && <div className="mb-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">{modelError}</div>}
+              {modelSuccess && <div className="mb-3 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-700">{modelSuccess}</div>}
+              <form onSubmit={handleModelSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Brand</label>
+                  <select value={modelForm.brand_id} onChange={e => setModelForm(p => ({ ...p, brand_id: e.target.value }))} required className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Select brand</option>
+                    {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Model Name</label>
+                  <input value={modelForm.model_name} onChange={e => setModelForm(p => ({ ...p, model_name: e.target.value }))} required placeholder="e.g. FEW0-TZ0" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Warranty (months, optional)</label>
+                  <input type="number" value={modelForm.warranty_months} onChange={e => setModelForm(p => ({ ...p, warranty_months: e.target.value }))} min="1" placeholder="e.g. 24" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <button type="submit" disabled={modelLoading} className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60 transition-colors">
+                  {modelLoading ? 'Adding...' : 'Add Model'}
+                </button>
+              </form>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="font-semibold text-slate-800">All Models</h3>
+                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded-full">{models.length}</span>
               </div>
-            )}
-          </section>
+              {models.length === 0 ? (
+                <p className="px-6 py-8 text-center text-sm text-slate-400">No models yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-slate-50/60">
+                        {['Brand', 'Model', 'Warranty'].map(h => (
+                          <th key={h} className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {models.map(m => (
+                        <tr key={m.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-3 text-sm text-slate-600">{brandsMap[m.brand_id] || '—'}</td>
+                          <td className="px-6 py-3 text-sm font-medium text-slate-800">{m.model_name}</td>
+                          <td className="px-6 py-3 text-sm text-slate-500">{m.warranty_months ? `${m.warranty_months} mo` : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    </AppLayout>
+    </DashboardLayout>
   );
-};
-
-export default BrandsPage;
+}
