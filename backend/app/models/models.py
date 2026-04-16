@@ -1,10 +1,24 @@
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text, func
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Text, func, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from app.database.connection import engine
 from datetime import datetime
 
 Base = declarative_base()
 
+
+# ---------------------------
+# USER TABLE (For Admin/Staff)
+# ---------------------------
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    supabase_uid = Column(String, unique=True, nullable=False)
+    email = Column(String, unique=True, nullable=False)
+    is_active = Column(Integer, default=1, nullable=False)  # 0=inactive, 1=active
+
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
 # ---------------------------
@@ -18,6 +32,7 @@ class Customer(Base):
     phone = Column(String, unique=True, nullable=False)
     email = Column(String, nullable=True)
     address = Column(Text, nullable=True)
+    is_active = Column(Integer, default=1, nullable=False)  # 0=inactive, 1=active
 
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
@@ -31,6 +46,7 @@ class BatteryBrand(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
+    is_active = Column(Integer, default=1, nullable=False)  # 0=inactive, 1=active
 
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
@@ -46,6 +62,7 @@ class BatteryModel(Base):
     brand_id = Column(Integer, ForeignKey("battery_brands.id"), nullable=False)
     model_name = Column(String, nullable=False)
     warranty_months = Column(Integer, nullable=True)
+    is_active = Column(Integer, default=1, nullable=False)  # 0=inactive, 1=active
 
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
@@ -66,6 +83,7 @@ class Battery(Base):
     serial_number = Column(String, unique=True, nullable=False)
     date_of_sale = Column(Date, nullable=False)
     invoice_number = Column(String, nullable=True)
+    is_active = Column(Integer, default=1, nullable=False)  # 0=inactive, 1=active
 
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
@@ -94,9 +112,10 @@ class Claim(Base):
     remarks = Column(Text, nullable=True)
 
     status = Column(String, default="pending")
+    is_active = Column(Integer, default=1, nullable=False)  # 0=inactive, 1=active
 
     created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now, onupdate=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 # Create the table
 def create_tables():

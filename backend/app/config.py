@@ -3,15 +3,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-env = os.getenv("ENV", "development")
-if env == "production":
-    load_dotenv(".env.production")
-elif env == "beta":
-    load_dotenv(".env.beta")
-else:
-    load_dotenv(".env.development")
+# CORS origins
+origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    # Add your frontend URLs
+]
 
-# Load ALLOWED_ORIGINS and ensure it defaults to an empty string if not set
-raw_origins = os.getenv("ALLOWED_ORIGINS", "")
-# Parse origins into a list
-origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+# Supabase configuration
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+# Database configuration
+DB_HOST = os.getenv("DB_HOST")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_PORT = os.getenv("DB_PORT")

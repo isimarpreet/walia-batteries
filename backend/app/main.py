@@ -1,19 +1,22 @@
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import ValidationError as PydanticValidationError
-from pydantic_core import ValidationError as PydanticCoreValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.config import origins  # This loads envs before anything else
+from app.config import origins
 from app.exceptions import (
     custom_http_exception_handler,
     generic_exception_handler,
     validation_exception_handler,
 )
 from app.models.models import create_tables
+from app.routers import customer, battery, auth,brand, model,claim
 
-app = FastAPI()
+app = FastAPI(
+    title="Battery Claim Management System",
+    description="Backend API for managing battery warranty claims",
+    version="1.0.0"
+)
 
 # Middleware for CORS
 app.add_middleware(
@@ -28,29 +31,30 @@ app.add_middleware(
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
 app.add_exception_handler(StarletteHTTPException, custom_http_exception_handler)
-app.add_exception_handler(PydanticValidationError, validation_exception_handler)
-app.add_exception_handler(PydanticCoreValidationError, validation_exception_handler)
+
+# Include routers
+app.include_router(auth.router)
+app.include_router(customer.router)
+app.include_router(battery.router)
+app.include_router(brand.router)
+app.include_router(model.router)
+app.include_router(claim.router)
+
 
 @app.on_event("startup")
 async def startup_event():
     create_tables()
 
+
 @app.get("/")
 async def root():
-    return {"message": "Server is running and database tables are created!"}
-
-# Add this to app/main.py (below your @app.get("/") route)
-
-@app.get("/api/customers")
-async def get_customers():
-    # For now, we are returning dummy data from the backend.
-    # Later, we will replace this with a real SQLAlchemy database query!
     return {
-        "status_code": 200,
-        "message": "Customers fetched successfully",
-        "data": [
-            { "id": 1, "name": "Rujesh Kumar", "phone": "9870542210", "email": "rejesh@kumar.com", "address": "1600, Unit 1 Delhi, deoto" },
-            { "id": 2, "name": "Snarch Natore", "phone": "9870542210", "email": "rejesh@kumar.com", "address": "1200, Unit 1 Delhi, deoto" },
-            { "id": 3, "name": "Amit Singh", "phone": "9876543210", "email": "amit@singh.com", "address": "45, Phase 2, Noida" }
-        ]
+        "message": "Battery Claim Management System API",
+        "version": "1.0.0",
+        "status": "running"
     }
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
