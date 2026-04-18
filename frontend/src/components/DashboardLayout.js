@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
-import { Search, Bell, Plus } from 'lucide-react';
+import { Search, Bell, Plus, Menu } from 'lucide-react';
 
 const CRUMBS = {
   '/':              ['Workspace', 'Dashboard'],
@@ -13,13 +14,23 @@ const CRUMBS = {
   '/brands':        ['System', 'Brands & models'],
 };
 
-function Topbar() {
+function Topbar({ onMenuClick }) {
   const pathname = usePathname();
   const router   = useRouter();
   const crumb    = CRUMBS[pathname] || ['Workspace'];
 
   return (
     <div className="topbar">
+      {/* Hamburger — only visible on mobile via CSS */}
+      <button
+        className="hamburger icon-btn"
+        onClick={onMenuClick}
+        aria-label="Open navigation"
+        style={{ flexShrink: 0 }}
+      >
+        <Menu size={18} strokeWidth={1.75} />
+      </button>
+
       <nav className="crumb" aria-label="Breadcrumb">
         {crumb.map((seg, i) => (
           <span key={i}>
@@ -29,6 +40,7 @@ function Topbar() {
         ))}
       </nav>
 
+      {/* Search — hidden on mobile via CSS */}
       <div className="topbar-search">
         <Search size={14} className="ts-icon" />
         <input placeholder="Search customers, batteries, serial…" />
@@ -46,11 +58,25 @@ function Topbar() {
 }
 
 export default function DashboardLayout({ children }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const closeSidebar = () => setSidebarOpen(false);
+
   return (
     <div className="app">
-      <Sidebar />
+      {/* Sidebar */}
+      <Sidebar mobileOpen={sidebarOpen} onClose={closeSidebar} />
+
+      {/* Mobile scrim — clicking outside closes the sidebar */}
+      <div
+        className={'sidebar-mobile-scrim' + (sidebarOpen ? ' open' : '')}
+        onClick={closeSidebar}
+        aria-hidden="true"
+      />
+
+      {/* Main content */}
       <div className="main">
-        <Topbar />
+        <Topbar onMenuClick={() => setSidebarOpen(true)} />
         {children}
       </div>
     </div>

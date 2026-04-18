@@ -92,7 +92,7 @@ export default function BrandsPage() {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 20 }}>
+        <div className="brands-grid" style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 20 }}>
           {tab === 'brands' ? (
             <>
               {/* Add brand form */}

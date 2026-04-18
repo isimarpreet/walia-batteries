@@ -328,15 +328,75 @@ a { color: inherit; text-decoration: none; }
 /* ─── Empty state ───────────────────────────────────────────────── */
 .empty { text-align: center; padding: 56px 20px; color: var(--muted); font-size: 13px; }
 
+/* ─── Hamburger (hidden on desktop) ────────────────────────────── */
+.hamburger { display: none; }
+
+/* ─── Mobile sidebar scrim ──────────────────────────────────────── */
+.sidebar-mobile-scrim {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(20,20,15,.35);
+  backdrop-filter: blur(2px);
+  z-index: 49;
+  opacity: 0; pointer-events: none;
+  transition: opacity 180ms ease;
+}
+.sidebar-mobile-scrim.open { opacity: 1; pointer-events: all; }
+
 /* ─── Animations ────────────────────────────────────────────────── */
 .fade-in { animation: fadein 220ms ease both; }
 @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ─── Responsive ────────────────────────────────────────────────── */
+/* ─── Responsive · tablet (≤960px) ─────────────────────────────── */
 @media (max-width: 960px) {
+  /* Grid collapses — sidebar leaves the flow */
   .app { grid-template-columns: 1fr; }
-  .sidebar { display: none; }
+
+  /* Sidebar becomes a fixed left-side drawer */
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: 248px;
+    transform: translateX(-100%);
+    transition: transform 220ms cubic-bezier(0.32, 0.72, 0, 1);
+    z-index: 50;
+    box-shadow: 4px 0 40px rgba(20,20,15,.15);
+  }
+  .sidebar.mobile-open { transform: translateX(0); }
+
+  /* Show scrim and hamburger */
+  .sidebar-mobile-scrim { display: block; }
+  .hamburger { display: grid; }
+
+  /* Hide topbar search to save space */
+  .topbar-search { display: none; }
+
+  /* Stats — 2 columns */
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* Page padding tighter */
+  .page { padding: 20px 18px 40px; }
+
+  /* Page header stacks vertically */
+  .page-head { flex-direction: column; align-items: flex-start; gap: 14px; }
+
+  /* Brands grid stacks */
+  .brands-grid { grid-template-columns: 1fr !important; }
+
+  /* Login */
   .login-shell { grid-template-columns: 1fr; }
   .login-side { display: none; }
+}
+
+/* ─── Responsive · phone (≤520px) ──────────────────────────────── */
+@media (max-width: 520px) {
+  .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat .v { font-size: 32px; }
+  .page { padding: 16px 14px 32px; }
+  .tbl-wrap thead th, .tbl-wrap tbody td { padding: 10px 12px; }
+  .card-head { padding: 14px 14px; flex-wrap: wrap; gap: 8px; }
+  .pagination { flex-direction: column; gap: 10px; align-items: flex-start; }
+  .page-title { font-size: 26px; }
+  .topbar { padding: 12px 16px; gap: 10px; }
+  .drawer { width: 100vw; max-width: 100vw; }
 }

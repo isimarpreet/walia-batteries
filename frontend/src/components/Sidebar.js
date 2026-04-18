@@ -3,19 +3,19 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import {
-  LayoutDashboard, Users, Battery, FileText, FilePlus, Tag, LogOut, Settings,
+  LayoutDashboard, Users, Battery, FileText, FilePlus, Tag, LogOut,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { id: 'dashboard',    label: 'Dashboard',       path: '/',              icon: LayoutDashboard },
-  { id: 'customers',    label: 'Customers',        path: '/customers',     icon: Users },
-  { id: 'batteries',    label: 'Batteries',        path: '/batteries',     icon: Battery },
-  { id: 'claims',       label: 'Claims',           path: '/claims',        icon: FileText },
-  { id: 'createclaim',  label: 'File a claim',     path: '/claims/create', icon: FilePlus },
+  { id: 'dashboard',   label: 'Dashboard',     path: '/',              icon: LayoutDashboard },
+  { id: 'customers',   label: 'Customers',     path: '/customers',     icon: Users },
+  { id: 'batteries',   label: 'Batteries',     path: '/batteries',     icon: Battery },
+  { id: 'claims',      label: 'Claims',        path: '/claims',        icon: FileText },
+  { id: 'createclaim', label: 'File a claim',  path: '/claims/create', icon: FilePlus },
 ];
 
 const SECONDARY = [
-  { id: 'brands',  label: 'Brands & models', path: '/brands', icon: Tag },
+  { id: 'brands', label: 'Brands & models', path: '/brands', icon: Tag },
 ];
 
 function Monogram() {
@@ -33,18 +33,24 @@ function Monogram() {
   );
 }
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen = false, onClose }) {
   const router   = useRouter();
   const pathname = usePathname();
   const { logout } = useAuth();
 
+  const navigate = (path) => {
+    router.push(path);
+    onClose?.();   // auto-close on mobile after tapping a nav item
+  };
+
   const handleLogout = () => {
     logout();
     router.push('/login');
+    onClose?.();
   };
 
   return (
-    <aside className="sidebar">
+    <aside className={'sidebar' + (mobileOpen ? ' mobile-open' : '')}>
       {/* Brand */}
       <div className="brand">
         <Monogram />
@@ -63,7 +69,7 @@ export default function Sidebar() {
           <button
             key={item.id}
             className={'nav-item' + (active ? ' active' : '')}
-            onClick={() => router.push(item.path)}
+            onClick={() => navigate(item.path)}
           >
             <Icon size={16} strokeWidth={1.75} className="nav-icon" />
             <span>{item.label}</span>
@@ -80,7 +86,7 @@ export default function Sidebar() {
           <button
             key={item.id}
             className={'nav-item' + (active ? ' active' : '')}
-            onClick={() => router.push(item.path)}
+            onClick={() => navigate(item.path)}
           >
             <Icon size={16} strokeWidth={1.75} className="nav-icon" />
             <span>{item.label}</span>
