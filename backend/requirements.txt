@@ -7,3 +7,4 @@ httpx
 asyncpg
 sqlalchemy
 supabase
+psycopg2-binary
