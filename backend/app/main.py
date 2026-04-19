@@ -41,9 +41,9 @@ app.include_router(model.router)
 app.include_router(claim.router)
 
 
-@app.on_event("startup")
-async def startup_event():
-    create_tables()
+# @app.on_event("startup")
+# async def startup_event():
+#     create_tables()
 
 
 @app.get("/")
