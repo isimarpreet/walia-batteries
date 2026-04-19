@@ -8,3 +8,4 @@ asyncpg
 sqlalchemy
 supabase
 psycopg2-binary
+email-validator
