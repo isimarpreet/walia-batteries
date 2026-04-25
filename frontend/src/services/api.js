@@ -49,6 +49,10 @@ export const customerAPI = {
     apiClient.get('/customers/all', { params: { page, page_size: pageSize } }),
   getById: (id) =>
     apiClient.get(`/customers/${id}`),
+  update: (id, data) =>
+    apiClient.put(`/customers/${id}`, data),
+  delete: (id) =>
+    apiClient.delete(`/customers/${id}`),
 };
 
 export const batteryAPI = {
@@ -98,10 +102,14 @@ export const claimAPI = {
         ...(status ? { status } : {}),
       },
     }),
+  searchByPhone: (phone) =>
+    apiClient.get('/claims/search', { params: { phone } }),
   getByCustomer: (customerId) =>
     apiClient.get(`/claims/customer/${customerId}`),
   getById: (id) =>
     apiClient.get(`/claims/${id}`),
+  updateStatus: (id, status) =>
+    apiClient.patch(`/claims/${id}/status`, { status }),
 };
 
 export default apiClient;

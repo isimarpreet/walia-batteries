@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.dependencies import get_db
-from app.schemas.customer import CustomerCreate
+from app.schemas.customer import CustomerCreate, CustomerUpdate
 from app.crud import customer as customer_crud
 from app.utils.auth import get_current_user
 from app.utils.response import SuccessResponse
@@ -70,31 +70,31 @@ def get_customer_by_id_route(
     )
 
 
-# @router.put("/{id:int}", response_model=SuccessResponse)
-# def update_customer_route(
-#     id: int,
-#     payload: CustomerUpdate,
-#     db: Session = Depends(get_db),
-#     current_user: dict = Depends(get_current_user),
-# ):
-#     """Update customer details"""
-#     return customer_crud.update_customer(
-#         db=db,
-#         customer_id=id,
-#         customer_update=payload,
-#         current_user=current_user.data,
-#     )
+@router.put("/{id:int}", response_model=SuccessResponse)
+def update_customer_route(
+    id: int,
+    payload: CustomerUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Update customer details"""
+    return customer_crud.update_customer(
+        db=db,
+        customer_id=id,
+        customer_update=payload,
+        current_user=current_user.data,
+    )
 
 
-# @router.delete("/{id:int}", response_model=SuccessResponse)
-# def delete_customer_route(
-#     id: int,
-#     db: Session = Depends(get_db),
-#     current_user: dict = Depends(get_current_user),
-# ):
-#     """Delete customer"""
-#     return customer_crud.delete_customer(
-#         db=db,
-#         customer_id=id,
-#         current_user=current_user.data,
-#     )
+@router.delete("/{id:int}", response_model=SuccessResponse)
+def delete_customer_route(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Delete customer"""
+    return customer_crud.delete_customer(
+        db=db,
+        customer_id=id,
+        current_user=current_user.data,
+    )

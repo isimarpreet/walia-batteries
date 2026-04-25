@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models.models import Claim, Customer, Battery, BatteryBrand, BatteryModel
-from app.schemas.claim import ClaimCreate, ClaimResponse
+from app.schemas.claim import ClaimCreate, ClaimResponse, ClaimStatusUpdate
 from app.utils.response import SuccessResponse, ErrorResponse
 import random
 
@@ -220,6 +220,71 @@ def get_claim_by_id(*, db: Session, claim_id: int, current_user: dict):
                 "brand_name": new_battery_brand.name if new_battery_brand else None,
                 "serial_number": claim.new_battery_serial_number,
             } if new_battery_model else None,
+        },
+    )
+
+
+def update_claim_status(*, db: Session, claim_id: int, status_update: ClaimStatusUpdate, current_user: dict):
+    """Update claim status"""
+    claim = db.query(Claim).filter(Claim.id == claim_id, Claim.is_active == 1).first()
+    if not claim:
+        return ErrorResponse(
+            code=404,
+            message="Claim not found.",
+        )
+
+    claim.status = status_update.status
+    db.commit()
+    db.refresh(claim)
+
+    return SuccessResponse(
+        code=200,
+        message="Claim status updated successfully.",
+        data=ClaimResponse.model_validate(claim),
+    )
+
+
+def get_claims_by_phone(*, db: Session, phone: str, current_user: dict):
+    """Get all claims for a customer found by phone number"""
+    customer = db.query(Customer).filter(Customer.phone == phone).first()
+    if not customer:
+        return ErrorResponse(
+            code=404,
+            message="Customer not found.",
+        )
+
+    claims = db.query(Claim).filter(
+        Claim.customer_id == customer.id,
+        Claim.is_active == 1
+    ).order_by(Claim.created_at.desc()).all()
+
+    battery_ids = list({c.faulty_battery_id for c in claims})
+    model_ids = list({c.new_battery_model_id for c in claims if c.new_battery_model_id})
+
+    batteries = db.query(Battery).filter(Battery.id.in_(battery_ids)).all() if battery_ids else []
+    models = db.query(BatteryModel).filter(BatteryModel.id.in_(model_ids)).all() if model_ids else []
+
+    batteries_map = {b.id: b for b in batteries}
+    models_map = {m.id: m for m in models}
+
+    result = []
+    for claim in claims:
+        battery = batteries_map.get(claim.faulty_battery_id)
+        new_model = models_map.get(claim.new_battery_model_id) if claim.new_battery_model_id else None
+        result.append({
+            "claim": ClaimResponse.model_validate(claim),
+            "customer_name": customer.name,
+            "customer_phone": customer.phone,
+            "battery_serial": battery.serial_number if battery else None,
+            "new_model_name": new_model.model_name if new_model else None,
+        })
+
+    return SuccessResponse(
+        code=200,
+        message="Claims fetched successfully.",
+        data={
+            "customer": {"id": customer.id, "name": customer.name, "phone": customer.phone},
+            "claims": result,
         },
     )
 
