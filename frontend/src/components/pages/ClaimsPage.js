@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '../DashboardLayout';
 import { claimAPI } from '../../services/api';
-import { Plus, Search, Calendar } from 'lucide-react';
+import { Plus, Search, X, Phone } from 'lucide-react';
 
 function fmtDate(d) {
   if (!d) return '—';
@@ -23,6 +23,72 @@ function StatusPill({ status }) {
 
 const STOCK_LABELS = { new: 'New unit', foc: 'FOC', not_in_stock: 'Awaiting' };
 const STOCK_PILL_CLS = { new: 'info', foc: 'ok', not_in_stock: '' };
+const STATUS_OPTIONS = ['pending', 'resolved', 'rejected'];
+
+/* ── Inline status changer ──────────────────────────────────────── */
+function StatusChanger({ claimId, currentStatus, onChanged }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const pick = async (status) => {
+    if (status === currentStatus) { setOpen(false); return; }
+    setBusy(true);
+    setOpen(false);
+    try {
+      const res = await claimAPI.updateStatus(claimId, status);
+      if (res.data.success) onChanged(claimId, status);
+    } catch {}
+    finally { setBusy(false); }
+  };
+
+  const map = { pending: 'warn', resolved: 'ok', rejected: 'bad' };
+
+  return (
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        className={'pill ' + (map[currentStatus] || '')}
+        style={{ cursor: busy ? 'wait' : 'pointer', border: 'none', padding: '3px 9px', gap: 5 }}
+        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        disabled={busy}
+        title="Click to change status"
+      >
+        <span className="dot" />
+        {currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)}
+        {!busy && <span style={{ marginLeft: 2, opacity: 0.55, fontSize: 9 }}>▾</span>}
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, background: 'var(--surface)',
+          border: '1px solid var(--hair)', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+          zIndex: 40, minWidth: 130, overflow: 'hidden',
+        }}>
+          {STATUS_OPTIONS.map(s => (
+            <button
+              key={s}
+              onClick={(e) => { e.stopPropagation(); pick(s); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 14px',
+                background: s === currentStatus ? 'var(--surface-2)' : 'transparent',
+                border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--ink)',
+                fontWeight: s === currentStatus ? 600 : 400,
+              }}
+            >
+              <span className={'dot ' + (map[s] || '')} style={{ width: 7, height: 7, borderRadius: '50%', background: s === 'pending' ? 'var(--warn)' : s === 'resolved' ? 'var(--ok)' : 'var(--bad)', flexShrink: 0 }} />
+              {s.charAt(0).toUpperCase() + s.slice(1)}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const PAGE_SIZE = 10;
 
@@ -34,10 +100,20 @@ export default function ClaimsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
+
+  /* Text search (client-side on claim# / customer name) */
   const [q, setQ] = useState('');
+
+  /* Phone search (server-side) */
+  const [phoneQ, setPhoneQ] = useState('');
+  const [phoneResults, setPhoneResults] = useState(null); // null = not in phone-search mode
+  const [phoneCustomer, setPhoneCustomer] = useState(null);
+  const [phoneLoading, setPhoneLoading] = useState(false);
 
   const loadClaims = useCallback(async (p, status) => {
     setLoading(true);
+    setPhoneResults(null);
+    setPhoneCustomer(null);
     try {
       const res = await claimAPI.getAll(p, PAGE_SIZE, status === 'all' ? undefined : status);
       if (res.data.success) {
@@ -54,18 +130,63 @@ export default function ClaimsPage() {
 
   const handleStatusChange = (status) => {
     setStatusFilter(status);
+    setQ('');
     loadClaims(1, status);
   };
 
+  /* Phone search submit */
+  const handlePhoneSearch = async (e) => {
+    e.preventDefault();
+    if (!phoneQ.trim()) return;
+    setPhoneLoading(true);
+    try {
+      const res = await claimAPI.searchByPhone(phoneQ.trim());
+      if (res.data.success) {
+        setPhoneResults(res.data.data.claims || []);
+        setPhoneCustomer(res.data.data.customer || null);
+      } else {
+        setPhoneResults([]);
+        setPhoneCustomer(null);
+      }
+    } catch {
+      setPhoneResults([]);
+      setPhoneCustomer(null);
+    } finally { setPhoneLoading(false); }
+  };
+
+  const clearPhoneSearch = () => {
+    setPhoneQ('');
+    setPhoneResults(null);
+    setPhoneCustomer(null);
+  };
+
+  /* Inline status update callback */
+  const handleStatusUpdated = (claimId, newStatus) => {
+    const updateList = (list) =>
+      list.map(item => {
+        const c = item.claim || item;
+        if (c.id === claimId) return { ...item, claim: { ...c, status: newStatus } };
+        return item;
+      });
+
+    if (phoneResults !== null) {
+      setPhoneResults(prev => updateList(prev));
+    } else {
+      setClaims(prev => updateList(prev));
+    }
+  };
+
+  /* Which list to show */
+  const activeList = phoneResults !== null ? phoneResults : claims;
   const displayed = q.trim()
-    ? claims.filter(item => {
-        const c = item.claim;
+    ? activeList.filter(item => {
+        const c = item.claim || item;
         const s = q.toLowerCase();
         return String(c.claim_number).includes(s)
           || (item.customer_name || '').toLowerCase().includes(s)
           || (item.new_model_name || '').toLowerCase().includes(s);
       })
-    : claims;
+    : activeList;
 
   return (
     <DashboardLayout>
@@ -82,21 +203,52 @@ export default function ClaimsPage() {
           </div>
         </div>
 
+        {/* Phone search bar */}
+        <div className="card card-pad" style={{ marginBottom: 16 }}>
+          <form onSubmit={handlePhoneSearch} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="topbar-search" style={{ width: 260, margin: 0, position: 'relative', flex: '0 0 260px' }}>
+              <Phone size={13} className="ts-icon" />
+              <input
+                value={phoneQ}
+                onChange={e => setPhoneQ(e.target.value)}
+                placeholder="Find claims by phone…"
+                style={{ paddingRight: 12 }}
+              />
+            </div>
+            <button type="submit" className="btn" disabled={phoneLoading || !phoneQ.trim()}>
+              {phoneLoading ? 'Searching…' : 'Search'}
+            </button>
+            {phoneResults !== null && (
+              <button type="button" className="btn ghost" onClick={clearPhoneSearch}>
+                <X size={12} /> Clear
+              </button>
+            )}
+            {phoneCustomer && (
+              <div style={{ marginLeft: 8, fontSize: 13, color: 'var(--muted)' }}>
+                Showing claims for <strong style={{ color: 'var(--ink)' }}>{phoneCustomer.name}</strong>
+                <span className="ff-mono" style={{ marginLeft: 6, fontSize: 12 }}>{phoneCustomer.phone}</span>
+              </div>
+            )}
+          </form>
+        </div>
+
         <div className="card">
           <div className="card-head" style={{ gap: 12, flexWrap: 'wrap' }}>
-            <div className="chips">
-              {['all', 'pending', 'resolved', 'rejected'].map(s => (
-                <button
-                  key={s}
-                  className={'chip' + (statusFilter === s ? ' active' : '')}
-                  onClick={() => handleStatusChange(s)}
-                >
-                  {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
-                  {s === 'all' && <span style={{ opacity: 0.55, marginLeft: 5 }}>{totalCount}</span>}
-                </button>
-              ))}
-            </div>
-            <div className="topbar-search" style={{ width: 260, margin: '0 0 0 auto', position: 'relative' }}>
+            {phoneResults === null && (
+              <div className="chips">
+                {['all', 'pending', 'resolved', 'rejected'].map(s => (
+                  <button
+                    key={s}
+                    className={'chip' + (statusFilter === s ? ' active' : '')}
+                    onClick={() => handleStatusChange(s)}
+                  >
+                    {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+                    {s === 'all' && <span style={{ opacity: 0.55, marginLeft: 5 }}>{totalCount}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="topbar-search" style={{ width: 240, margin: '0 0 0 auto', position: 'relative' }}>
               <Search size={14} className="ts-icon" />
               <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search claim #, customer…" style={{ paddingRight: 12 }} />
             </div>
@@ -112,12 +264,12 @@ export default function ClaimsPage() {
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
+                {(loading || phoneLoading) ? (
                   <tr><td colSpan={7} className="empty">Loading…</td></tr>
                 ) : displayed.length === 0 ? (
                   <tr><td colSpan={7} className="empty">No claims match.</td></tr>
                 ) : displayed.map(item => {
-                  const c = item.claim;
+                  const c = item.claim || item;
                   const cls = STOCK_PILL_CLS[c.stock_status] || '';
                   return (
                     <tr key={c.id}>
@@ -126,10 +278,21 @@ export default function ClaimsPage() {
                           C{String(c.claim_number).padStart(5, '0')}
                         </span>
                       </td>
-                      <td className="strong">{item.customer_name}</td>
+                      <td className="strong">
+                        <div>{item.customer_name}</div>
+                        {item.customer_phone && (
+                          <div className="ff-mono" style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 400 }}>{item.customer_phone}</div>
+                        )}
+                      </td>
                       <td style={{ color: 'var(--muted)' }}>{item.new_model_name || item.battery_serial || '—'}</td>
                       <td><span className="ff-mono" style={{ color: 'var(--muted)' }}>{c.co_number || '—'}</span></td>
-                      <td><StatusPill status={c.status} /></td>
+                      <td onClick={e => e.stopPropagation()}>
+                        <StatusChanger
+                          claimId={c.id}
+                          currentStatus={c.status}
+                          onChanged={handleStatusUpdated}
+                        />
+                      </td>
                       <td>
                         <span className={'pill ' + cls}>
                           <span className="dot" />
@@ -144,7 +307,7 @@ export default function ClaimsPage() {
             </table>
           </div>
 
-          {totalPages > 1 && (
+          {phoneResults === null && totalPages > 1 && (
             <div className="pagination">
               <div>Page <strong>{page}</strong> of {totalPages} · {totalCount} total</div>
               <div className="pg-btns">

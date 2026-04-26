@@ -33,6 +33,22 @@ class ClaimCreate(ClaimBase):
     pass
 
 
+class ClaimStatusUpdate(BaseModel):
+    status: str = Field(..., description="pending / resolved / rejected")
+
+    @field_validator("status", mode="before")
+    def validate_status(cls, val):
+        if not isinstance(val, str):
+            raise PydanticCustomError("custom", "Status must be a string.")
+        valid = ["pending", "resolved", "rejected"]
+        if val.strip().lower() not in valid:
+            raise PydanticCustomError(
+                "custom",
+                f"Status must be one of: {', '.join(valid)}"
+            )
+        return val.strip().lower()
+
+
 class ClaimResponse(BaseModel):
     id: int
     claim_number: int

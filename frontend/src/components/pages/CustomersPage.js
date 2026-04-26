@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import DashboardLayout from '../DashboardLayout';
 import { customerAPI, batteryAPI, claimAPI } from '../../services/api';
-import { Search, Plus, Download, Eye, X } from 'lucide-react';
+import { Search, Plus, Eye, X, Pencil, Trash2 } from 'lucide-react';
 
 function fmtDate(d) {
   if (!d) return '—';
@@ -21,7 +21,7 @@ function StatusPill({ status }) {
 }
 
 /* ── Customer detail drawer ─────────────────────────────────────── */
-function CustomerDrawer({ customerId, onClose }) {
+function CustomerDrawer({ customerId, onClose, onEdit, onDelete }) {
   const [customer, setCustomer] = useState(null);
   const [batteries, setBatteries] = useState([]);
   const [claims, setClaims] = useState([]);
@@ -30,6 +30,7 @@ function CustomerDrawer({ customerId, onClose }) {
   useEffect(() => {
     if (!customerId) return;
     setLoading(true);
+    setCustomer(null);
     Promise.allSettled([
       customerAPI.getById(customerId),
       batteryAPI.getByCustomer(customerId),
@@ -63,7 +64,15 @@ function CustomerDrawer({ customerId, onClose }) {
             <div style={{ fontSize: 11.5, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Detail view</div>
             <div className="drawer-title">{customer?.name || 'Customer'}</div>
           </div>
-          <button className="icon-btn" onClick={onClose}><X size={16} strokeWidth={1.75} /></button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {customer && (
+              <>
+                <button className="icon-btn" title="Edit" onClick={() => onEdit(customer)}><Pencil size={15} strokeWidth={1.75} /></button>
+                <button className="icon-btn" title="Delete" onClick={() => onDelete(customer)} style={{ color: 'var(--bad)' }}><Trash2 size={15} strokeWidth={1.75} /></button>
+              </>
+            )}
+            <button className="icon-btn" onClick={onClose}><X size={16} strokeWidth={1.75} /></button>
+          </div>
         </div>
         <div className="drawer-body">
           {loading ? (
@@ -144,9 +153,15 @@ function CustomerDrawer({ customerId, onClose }) {
   );
 }
 
-/* ── Add customer modal ─────────────────────────────────────────── */
-function AddCustomerModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({ name: '', phone: '', email: '', address: '' });
+/* ── Add / Edit customer drawer ─────────────────────────────────── */
+function CustomerFormDrawer({ customer, onClose, onSaved }) {
+  const isEdit = !!customer;
+  const [form, setForm] = useState({
+    name: customer?.name || '',
+    phone: customer?.phone || '',
+    email: customer?.email || '',
+    address: customer?.address || '',
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -155,11 +170,19 @@ function AddCustomerModal({ onClose, onCreated }) {
     setError('');
     setSaving(true);
     try {
-      const res = await customerAPI.create(form);
-      if (res.data.success) { onCreated(); onClose(); }
-      else setError(res.data.message || 'Failed to create customer');
+      const payload = {
+        name: form.name,
+        phone: form.phone,
+        email: form.email.trim() || null,
+        address: form.address.trim() || null,
+      };
+      const res = isEdit
+        ? await customerAPI.update(customer.id, payload)
+        : await customerAPI.create(payload);
+      if (res.data.success) { onSaved(); onClose(); }
+      else setError(res.data.message || 'Failed to save customer');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create customer');
+      setError(err.response?.data?.message || 'Failed to save customer');
     } finally { setSaving(false); }
   };
 
@@ -169,23 +192,77 @@ function AddCustomerModal({ onClose, onCreated }) {
       <div className="drawer open" role="dialog">
         <div className="drawer-head">
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11.5, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>New record</div>
-            <div className="drawer-title">Add customer</div>
+            <div style={{ fontSize: 11.5, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{isEdit ? 'Edit record' : 'New record'}</div>
+            <div className="drawer-title">{isEdit ? 'Edit customer' : 'Add customer'}</div>
           </div>
           <button className="icon-btn" onClick={onClose}><X size={16} strokeWidth={1.75} /></button>
         </div>
         <div className="drawer-body">
           {error && <div style={{ marginBottom: 16, padding: '10px 14px', background: 'var(--bad-soft)', color: 'var(--bad)', borderRadius: 8, fontSize: 13 }}>{error}</div>}
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div className="field"><label>Name</label><input className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required placeholder="Customer name" /></div>
-            <div className="field"><label>Phone</label><input className="input" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} required placeholder="Phone number" /></div>
-            <div className="field"><label>Email <span style={{ color: 'var(--muted-2)', fontWeight: 400 }}>(optional)</span></label><input type="email" className="input" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="email@example.com" /></div>
-            <div className="field"><label>Address <span style={{ color: 'var(--muted-2)', fontWeight: 400 }}>(optional)</span></label><textarea className="ds-textarea input" rows={3} value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="Address" style={{ resize: 'vertical', minHeight: 80 }} /></div>
+            <div className="field">
+              <label>Name</label>
+              <input className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required placeholder="Customer name" />
+            </div>
+            <div className="field">
+              <label>Phone</label>
+              <input className="input" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} required placeholder="Phone number" />
+            </div>
+            <div className="field">
+              <label>Email <span style={{ color: 'var(--muted-2)', fontWeight: 400 }}>(optional)</span></label>
+              <input type="email" className="input" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
+            </div>
+            <div className="field">
+              <label>Address <span style={{ color: 'var(--muted-2)', fontWeight: 400 }}>(optional)</span></label>
+              <textarea className="ds-textarea input" rows={3} value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="Address" style={{ resize: 'vertical', minHeight: 80 }} />
+            </div>
             <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: '1px solid var(--hair)', justifyContent: 'flex-end' }}>
               <button type="button" className="btn" onClick={onClose}>Cancel</button>
-              <button type="submit" className="btn primary" disabled={saving}>{saving ? 'Saving…' : 'Save customer'}</button>
+              <button type="submit" className="btn primary" disabled={saving}>{saving ? 'Saving…' : isEdit ? 'Save changes' : 'Save customer'}</button>
             </div>
           </form>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ── Delete confirmation dialog ─────────────────────────────────── */
+function DeleteDialog({ customer, onClose, onDeleted }) {
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setError('');
+    try {
+      const res = await customerAPI.delete(customer.id);
+      if (res.data.success) { onDeleted(); onClose(); }
+      else setError(res.data.message || 'Failed to delete');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete');
+    } finally { setDeleting(false); }
+  };
+
+  return (
+    <>
+      <div className="drawer-scrim open" onClick={onClose} />
+      <div style={{
+        position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 60, padding: 24,
+      }}>
+        <div className="card card-pad" style={{ maxWidth: 380, width: '100%' }}>
+          <div style={{ marginBottom: 8, fontWeight: 600, fontSize: 15 }}>Delete customer?</div>
+          <div style={{ fontSize: 13.5, color: 'var(--muted)', marginBottom: 20 }}>
+            <strong style={{ color: 'var(--ink)' }}>{customer.name}</strong> will be removed from the directory. This cannot be undone.
+          </div>
+          {error && <div style={{ marginBottom: 14, padding: '9px 12px', background: 'var(--bad-soft)', color: 'var(--bad)', borderRadius: 8, fontSize: 13 }}>{error}</div>}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button className="btn" onClick={onClose}>Cancel</button>
+            <button className="btn" style={{ background: 'var(--bad)', color: '#fff', border: 'none' }} onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
         </div>
       </div>
     </>
@@ -204,6 +281,8 @@ export default function CustomersPage() {
   const [q, setQ] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [drawerCustomerId, setDrawerCustomerId] = useState(null);
+  const [editCustomer, setEditCustomer] = useState(null);   // customer object to edit
+  const [deleteCustomer, setDeleteCustomer] = useState(null); // customer object to delete
   const [showAdd, setShowAdd] = useState(false);
 
   const loadCustomers = useCallback(async (p) => {
@@ -237,6 +316,18 @@ export default function CustomersPage() {
     finally { setLoading(false); }
   };
 
+  const handleEdit = (customer) => {
+    setDrawerCustomerId(null);    // close detail drawer
+    setEditCustomer(customer);
+  };
+
+  const handleDeleteIntent = (customer) => {
+    setDrawerCustomerId(null);    // close detail drawer
+    setDeleteCustomer(customer);
+  };
+
+  const refresh = () => loadCustomers(isSearching ? page : 1);
+
   return (
     <DashboardLayout>
       <div className="page fade-in">
@@ -259,7 +350,7 @@ export default function CustomersPage() {
               <input
                 value={q}
                 onChange={e => { setQ(e.target.value); if (!e.target.value) loadCustomers(1); }}
-                placeholder="Search name, phone…"
+                placeholder="Search by phone number…"
                 style={{ paddingRight: 12 }}
               />
             </form>
@@ -295,11 +386,17 @@ export default function CustomersPage() {
                     </td>
                     <td><span className="ff-mono">{c.phone}</span></td>
                     <td style={{ color: 'var(--muted)' }}>{c.email || '—'}</td>
-                    <td style={{ color: 'var(--muted)', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.address || '—'}</td>
+                    <td style={{ color: 'var(--muted)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.address || '—'}</td>
                     <td>
-                      <div className="row-actions">
-                        <button className="icon-btn" title="View details" onClick={e => { e.stopPropagation(); setDrawerCustomerId(c.id); }}>
+                      <div className="row-actions" onClick={e => e.stopPropagation()}>
+                        <button className="icon-btn" title="View details" onClick={() => setDrawerCustomerId(c.id)}>
                           <Eye size={14} strokeWidth={1.75} />
+                        </button>
+                        <button className="icon-btn" title="Edit" onClick={() => setEditCustomer(c)}>
+                          <Pencil size={14} strokeWidth={1.75} />
+                        </button>
+                        <button className="icon-btn" title="Delete" onClick={() => setDeleteCustomer(c)} style={{ color: 'var(--bad)' }}>
+                          <Trash2 size={14} strokeWidth={1.75} />
                         </button>
                       </div>
                     </td>
@@ -328,12 +425,23 @@ export default function CustomersPage() {
       <CustomerDrawer
         customerId={drawerCustomerId}
         onClose={() => setDrawerCustomerId(null)}
+        onEdit={handleEdit}
+        onDelete={handleDeleteIntent}
       />
 
-      {showAdd && (
-        <AddCustomerModal
-          onClose={() => setShowAdd(false)}
-          onCreated={() => loadCustomers(1)}
+      {(showAdd || editCustomer) && (
+        <CustomerFormDrawer
+          customer={editCustomer || null}
+          onClose={() => { setShowAdd(false); setEditCustomer(null); }}
+          onSaved={refresh}
+        />
+      )}
+
+      {deleteCustomer && (
+        <DeleteDialog
+          customer={deleteCustomer}
+          onClose={() => setDeleteCustomer(null)}
+          onDeleted={() => { setDeleteCustomer(null); loadCustomers(1); }}
         />
       )}
     </DashboardLayout>
